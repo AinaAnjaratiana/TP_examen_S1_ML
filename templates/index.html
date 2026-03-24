@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Éditeur Malagasy </title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<h1> Éditeur Intelligent Malagasy</h1>
+
+<div class="container">
+
+<textarea id="texte" placeholder="Soraty eto..."></textarea><br>
+
+<button onclick="analyser()">Analyser</button>
+<button onclick="traduireDernierMot()"> Traduire</button>
+<button onclick="lire()"> Lire</button>
+
+<h3>Résultats :</h3>
+<div id="resultat"></div>
+
+</div>
+
+<script>
+function analyser() {
+    let texte = document.getElementById("texte").value;
+
+    fetch("/analyser", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({texte})
+    })
+    .then(res => res.json())
+    .then(data => {
+        let div = document.getElementById("resultat");
+        div.innerHTML = "";
+
+        if (data.corrections.length === 0) {
+            div.innerHTML = "<div class='card'> Aucun problème détecté</div>";
+        } else {
+            data.corrections.forEach(c => {
+                div.innerHTML += `
+                <div class="card">
+                     <b>${c.mot}</b> → <b>${c.suggestion}</b><br>
+                     Lemme : <i>${c.lemme}</i><br>
+                    <button onclick="traduireMot('${c.suggestion}')"> Traduire</button>
+                </div>`;
+            });
+        }
+
+        div.innerHTML += `<div class="sentiment"> Sentiment : ${data.sentiment}</div>`;
+    });
+}
+
+function traduireMot(mot) {
+    fetch("/traduire", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({mot})
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert( mot + " = " + data.traduction);
+    });
+}
+
+function traduireDernierMot() {
+    let texte = document.getElementById("texte").value.trim();
+    if (!texte) return alert(" Aucun texte !");
+    let mots = texte.split(" ");
+    traduireMot(mots[mots.length - 1]);
+}
+
+function lire() {
+    let texte = document.getElementById("texte").value;
+
+    fetch("/tts", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({texte})
+    })
+    .then(res => res.json())
+    .then(data => {
+        let audio = new Audio(data.audio);
+        audio.play();
+    });
+}
+</script>
+
+</body>
+</html>
